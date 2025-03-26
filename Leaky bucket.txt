@@ -1,0 +1,25 @@
+#include <stdio.h>
+
+void leaky_bucket(int capacity, int leak_rate, int n, int packets[]) {
+    int bucket = 0;
+    printf("Time\tIncoming\tBucket\tLeaked\tRemaining\n");
+    for (int i = 0; i < n || bucket > 0; i++) {
+        int incoming = (i < n) ? packets[i] : 0;
+        bucket += incoming;
+        if (bucket > capacity) bucket = capacity;  // Overflow control
+        int leaked = (bucket >= leak_rate) ? leak_rate : bucket;
+        bucket -= leaked;
+        printf("%d\t%d\t%d\t%d\t%d\n", i + 1, incoming, bucket + leaked, leaked, bucket);
+    }
+}
+
+int main() {
+    int capacity, leak_rate, n;
+    printf("Enter bucket capacity, leak rate, number of packets: ");
+    scanf("%d %d %d", &capacity, &leak_rate, &n);
+    int packets[n];
+    printf("Enter packet sizes: ");
+    for (int i = 0; i < n; i++) scanf("%d", &packets[i]);
+    leaky_bucket(capacity, leak_rate, n, packets);
+    return 0;
+}
