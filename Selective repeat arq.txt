@@ -1,0 +1,39 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+
+#define WINDOW_SIZE 4
+#define TOTAL_FRAMES 10
+#define LOSS_PROBABILITY 20
+
+int send_frame(int frame_number) {
+    printf("Sending frame %d...\n", frame_number);
+    sleep(1);
+    return (rand() % 100 >= LOSS_PROBABILITY) ? printf("Frame %d sent successfully.\n", frame_number), 1 : printf("Frame %d lost!\n", frame_number), 0;
+}
+
+int receive_ack(int frame_number) {
+    printf("Receiving ACK for frame %d...\n", frame_number);
+    sleep(1);
+    return (rand() % 100 >= LOSS_PROBABILITY) ? printf("ACK for frame %d received.\n", frame_number), 1 : printf("ACK for frame %d lost!\n", frame_number), 0;
+}
+
+void selective_repeat_arq() {
+    int sent[TOTAL_FRAMES] = {0}, ack[TOTAL_FRAMES] = {0}, base = 0;
+    while (base < TOTAL_FRAMES) {
+        for (int i = base; i < base + WINDOW_SIZE && i < TOTAL_FRAMES; i++)
+            if (!sent[i]) sent[i] = send_frame(i);
+        for (int i = base; i < base + WINDOW_SIZE && i < TOTAL_FRAMES; i++)
+            if (sent[i] && !ack[i]) ack[i] = receive_ack(i);
+        while (base < TOTAL_FRAMES && ack[base])
+            printf("Sliding window. Frame %d acknowledged.\n", base++);
+    }
+    printf("All frames sent and acknowledged.\n");
+}
+
+int main() {
+    srand(time(0));
+    selective_repeat_arq();
+    return 0;
+}
