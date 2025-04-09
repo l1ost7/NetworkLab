@@ -1,0 +1,88 @@
+// Server Code (Receiver)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+#define PORT 8080
+
+int main() {
+    int server_fd, new_socket;
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+    char buffer[1024] = {0};
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(PORT);
+
+    bind(server_fd, (struct sockaddr *)&address, sizeof(address));
+    listen(server_fd, 3);
+    printf("Server waiting for connection...\n");
+
+    new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
+    printf("Client connected.\n");
+
+    while (read(new_socket, buffer, 1024) > 0) {
+        printf("Received: %s\n", buffer);
+        send(new_socket, "ACK", 3, 0);
+        memset(buffer, 0, 1024);
+    }
+
+    close(new_socket);
+    close(server_fd);
+    return 0;
+}
+
+// Client Code (Sender)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/time.h>
+
+#define PORT 8080
+#define TIMEOUT 3  // Timeout in seconds
+
+int main() {
+    int sock = socket(AF_INET, SOCK_STREAM, 0); 
+    struct sockaddr_in serv_addr;
+    char buffer[1024] = {0};
+    char msg[10];
+    struct timeval tv;
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+    inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr);
+    connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    printf("Connected to server.\n");
+
+    // Set socket timeout
+    tv.tv_sec = TIMEOUT;
+    tv.tv_usec = 0;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+
+    for (int i = 1; i <= 5; i++) {
+        while (1) {
+            sprintf(msg, "%d", i);
+            printf("Sending packet %s...\n", msg);
+            send(sock, msg, strlen(msg), 0);
+
+            // Wait for ACK
+            int valread = read(sock, buffer, 1024);
+            if (valread > 0 && strcmp(buffer, "ACK") == 0) {
+                printf("ACK received for packet %s\n", msg);
+                break;  // Move to next packet
+            } else {
+                printf("Timeout! Retransmitting packet %s...\n", msg);
+            }
+            memset(buffer, 0, 1024);
+        }
+    }
+
+    close(sock);
+    return 0;
+}
