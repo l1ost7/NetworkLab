@@ -1,0 +1,92 @@
+server;
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+void convertToWords(char *numStr, char *result) {
+    char *words[] = { "zero", "one", "two", "three", "four", 
+                      "five", "six", "seven", "eight", "nine" };
+    result[0] = '\0';  // Clear the result buffer
+
+    for (int i = 0; i < strlen(numStr); i++) {
+        if (numStr[i] >= '0' && numStr[i] <= '9') {
+            strcat(result, words[numStr[i] - '0']);
+            strcat(result, " ");
+        }
+    }
+}
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server, client;
+    char buffer[1024], result[1024];
+    socklen_t len = sizeof(client);
+
+    // Create UDP socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // Server address configuration
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(8080);
+
+    // Bind socket to address
+    bind(sockfd, (struct sockaddr *)&server, sizeof(server));
+
+    printf("Server waiting for numbers...\n");
+
+    // Receive number from client
+    recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&client, &len);
+    printf("Received number: %s\n", buffer);
+
+    // Convert number to words
+    convertToWords(buffer, result);
+
+    // Send back the word-converted result
+    sendto(sockfd, result, strlen(result), 0, (struct sockaddr *)&client, len);
+
+    close(sockfd);
+    return 0;
+}
+
+
+
+client;
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server;
+    char buffer[1024];
+    char response[1024];
+    socklen_t len = sizeof(server);
+
+    // Create UDP socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // Server address configuration
+    server.sin_family = AF_INET;
+    server.sin_port = htons(8080);
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    // Get input number from user
+    printf("Enter a number: ");
+    scanf("%s", buffer);
+
+    // Send number to server
+    sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&server, len);
+
+    // Receive response
+    recvfrom(sockfd, response, sizeof(response), 0, (struct sockaddr *)&server, &len);
+    printf("Number in words: %s\n", response);
+
+    close(sockfd);
+    return 0;
+}
+

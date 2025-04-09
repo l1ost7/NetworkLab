@@ -1,0 +1,89 @@
+server;
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+void reverseString(char *str) {
+    int i = 0, j = strlen(str) - 1;
+    while (i < j) {
+        char temp = str[i];
+        str[i] = str[j];
+        str[j] = temp;
+        i++;
+        j--;
+    }
+}
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server, client;
+    char buffer[1024];
+    socklen_t len = sizeof(client);
+
+    // Create UDP socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // Configure server address
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(8080);
+
+    // Bind the socket
+    bind(sockfd, (struct sockaddr *)&server, sizeof(server));
+
+    printf("Server ready. Waiting for message...\n");
+
+    // Receive string from client
+    recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&client, &len);
+    printf("Received: %s\n", buffer);
+
+    // Reverse the string
+    reverseString(buffer);
+
+    // Send reversed string back
+    sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&client, len);
+
+    close(sockfd);
+    return 0;
+}
+
+
+client;
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server;
+    char buffer[1024], response[1024];
+    socklen_t len = sizeof(server);
+
+    // Create UDP socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // Configure server
+    server.sin_family = AF_INET;
+    server.sin_port = htons(8080);
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    // Get input
+    printf("Enter a string to reverse: ");
+    fgets(buffer, sizeof(buffer), stdin);
+    buffer[strcspn(buffer, "\n")] = '\0';  // Remove newline
+
+    // Send to server
+    sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&server, len);
+
+    // Receive reversed string
+    recvfrom(sockfd, response, sizeof(response), 0, (struct sockaddr *)&server, &len);
+
+    printf("Reversed string from server: %s\n", response);
+
+    close(sockfd);
+    return 0;
+}

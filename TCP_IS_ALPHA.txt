@@ -1,0 +1,83 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <arpa/inet.h>
+
+void removeNonAlphabets(char *str) {
+    int i, j = 0;
+    char temp[strlen(str)];
+    for (i = 0; str[i]; i++) {
+        if (isalpha(str[i])) {
+            temp[j++] = str[i];
+        }
+    }
+    temp[j] = '\0';
+    strcpy(str, temp);
+}
+
+int main() {
+    int sockfd, newsock;
+    struct sockaddr_in server, client;
+    socklen_t len = sizeof(client);
+    char buffer[1024];
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(8080);
+
+    bind(sockfd, (struct sockaddr*)&server, sizeof(server));
+    listen(sockfd, 5);
+
+    printf("Server listening...\n");
+    newsock = accept(sockfd, (struct sockaddr*)&client, &len);
+
+    read(newsock, buffer, sizeof(buffer));
+    printf("Received string: %s\n", buffer);
+
+    removeNonAlphabets(buffer);
+
+    send(newsock, buffer, strlen(buffer), 0);
+
+    close(newsock);
+    close(sockfd);
+    return 0;
+}
+
+
+
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server;
+    char buffer[1024], response[1024];
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    server.sin_family = AF_INET;
+    server.sin_port = htons(8080);
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    connect(sockfd, (struct sockaddr*)&server, sizeof(server));
+
+    printf("Enter a string: ");
+    fgets(buffer, sizeof(buffer), stdin);
+    buffer[strcspn(buffer, "\n")] = '\0'; // Remove newline
+
+    send(sockfd, buffer, strlen(buffer), 0);
+
+    read(sockfd, response, sizeof(response));
+    printf("Alphabet-only string from server: %s\n", response);
+
+    close(sockfd);
+    return 0;
+}

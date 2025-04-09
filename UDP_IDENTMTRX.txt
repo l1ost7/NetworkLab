@@ -1,0 +1,93 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+#define SIZE 3
+
+int areEqual(int a[SIZE][SIZE], int b[SIZE][SIZE]) {
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            if (a[i][j] != b[i][j])
+                return 0;
+    return 1;
+}
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server, client;
+    socklen_t len = sizeof(client);
+
+    int matrixA[SIZE][SIZE], matrixB[SIZE][SIZE];
+    char result[50];
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(8080);
+
+    bind(sockfd, (struct sockaddr*)&server, sizeof(server));
+
+    printf("Server is running and waiting for matrices...\n");
+
+    recvfrom(sockfd, matrixA, sizeof(matrixA), 0, (struct sockaddr*)&client, &len);
+    recvfrom(sockfd, matrixB, sizeof(matrixB), 0, (struct sockaddr*)&client, &len);
+
+    if (areEqual(matrixA, matrixB))
+        strcpy(result, "Matrices are equal");
+    else
+        strcpy(result, "Matrices are not equal");
+
+    sendto(sockfd, result, sizeof(result), 0, (struct sockaddr*)&client, len);
+
+    close(sockfd);
+    return 0;
+}
+
+
+
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+#define SIZE 3
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server;
+    socklen_t len = sizeof(server);
+
+    int matrixA[SIZE][SIZE], matrixB[SIZE][SIZE];
+    char response[1024];
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    server.sin_family = AF_INET;
+    server.sin_port = htons(8080);
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    printf("Enter elements of Matrix A (%dx%d):\n", SIZE, SIZE);
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            scanf("%d", &matrixA[i][j]);
+
+    printf("Enter elements of Matrix B (%dx%d):\n", SIZE, SIZE);
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            scanf("%d", &matrixB[i][j]);
+
+    sendto(sockfd, matrixA, sizeof(matrixA), 0, (struct sockaddr*)&server, len);
+    sendto(sockfd, matrixB, sizeof(matrixB), 0, (struct sockaddr*)&server, len);
+
+    recvfrom(sockfd, response, sizeof(response), 0, (struct sockaddr*)&server, &len);
+
+    printf("Server Response: %s\n", response);
+
+    close(sockfd);
+    return 0;
+}
